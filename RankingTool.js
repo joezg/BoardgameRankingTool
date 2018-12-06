@@ -17,6 +17,8 @@ class RankingTool {
                 if (!acc.lowest || item.score <= acc.lowest.score){
                     acc.next = acc.lowest;
                     acc.lowest = item;
+                } else if (!acc.next){
+                    acc.next = item;
                 }
             }
 

@@ -1,3 +1,5 @@
+import { getRandomInt } from "./utils";
+
 class RankingTool {
     constructor(listToRank) {
         this.init(listToRank);
@@ -11,25 +13,16 @@ class RankingTool {
         this.currentPosition = 1;
     }
 
-    next = () => {
-        const found = this.items.reduce((acc, item) => {
-            if (item.lostBy === null && item.finalPosition === null){
-                if (!acc.lowest || item.score <= acc.lowest.score){
-                    acc.next = acc.lowest;
-                    acc.lowest = item;
-                } else if (!acc.next){
-                    acc.next = item;
-                }
-            }
+    next = (numberToChoseFrom = 2) => {
 
-            return acc;
-        }, {})
+        const candidates = this.items.filter( item => item.lostBy === null && item.finalPosition === null );
+        
+        if (candidates.length === 0){
+            return false;
+        }
 
-        if (!found.next){
-            if (!found.lowest){
-                return false;
-            }
-            const winner = found.lowest
+        if (candidates.length === 1){
+            const winner = candidates[0];
             winner.finalPosition = this.currentPosition;
             this.currentPosition++;
 
@@ -40,14 +33,16 @@ class RankingTool {
             return this.next();
         }
 
-        return [
-            found.lowest, found.next
-        ];
+        candidates.sort((itemA, itemB) => itemA.score - itemB.score );
+
+        return candidates.splice(0, numberToChoseFrom);
     }
 
     resolveMatchup = (winner, ...losers) => {
-        winner.score += losers[0].score; //TODO
-        losers.forEach((loser) => loser.lostBy = winner );
+        losers.forEach((loser) => {
+            winner.score += loser.score;
+            loser.lostBy = winner 
+        });
     }
 }
 

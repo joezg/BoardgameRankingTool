@@ -1,48 +1,75 @@
-import { getRandomInt } from "./utils";
+import { shuffle } from "./utils";
+import "./polyfill";
 
 class RankingTool {
-    constructor(listToRank) {
+    constructor(listToRank, options = {}) {
+        const { highestFirst = true, itemsInMatchup = 0 } = options;
+
+        this.highestFirst = highestFirst;
+        this.itemsInMatchup = itemsInMatchup;
         this.init(listToRank);
     }
 
     init = (listToRank) => {
         this.items = listToRank.map((item) => ({
-            item, score: 1, lostBy: null, finalPosition: null
+            item, score: 1, eliminatedBy: null, finalPosition: null
         }))
 
-        this.currentPosition = 1;
+        shuffle(this.items); //this is important for not hitting the worst case when ordered is (nearly) sorted
+
+        if (this.highestFirst){
+            this.currentPosition = 1;
+        } else {
+            this.currentPosition = this.items.length;
+        }
     }
 
-    next = (numberToChoseFrom = 2) => {
+    next = () => {
 
-        const candidates = this.items.filter( item => item.lostBy === null && item.finalPosition === null );
+        const candidates = this.items.filter( item => item.eliminatedBy === null && item.finalPosition === null );
         
         if (candidates.length === 0){
             return false;
         }
 
         if (candidates.length === 1){
-            const winner = candidates[0];
-            winner.finalPosition = this.currentPosition;
-            this.currentPosition++;
+            const last = candidates[0];
+            last.finalPosition = this.currentPosition;
+            this.currentPosition += this.highestFirst ? 1 : -1;
 
             this.items.forEach(item => {
-                item.lostBy === winner && (item.lostBy = null);
+                if (Array.isArray(item.eliminatedBy)){
+                    item.eliminatedBy.includes(last) && (item.eliminatedBy = null);
+                } else {
+                    item.eliminatedBy === last && (item.eliminatedBy = null);
+                }
             });
 
             return this.next();
         }
 
-        candidates.sort((itemA, itemB) => itemA.score - itemB.score );
+        candidates.sort((itemA, itemB) => itemB.score - itemA.score );
 
-        return candidates.splice(0, numberToChoseFrom);
+        return candidates.splice(0, this.itemsInMatchup);
     }
 
-    resolveMatchup = (winner, ...losers) => {
-        losers.forEach((loser) => {
-            winner.score += loser.score;
-            loser.lostBy = winner 
+    resolveWithPickup = (picked, ...others) => {
+        others.forEach((other) => {
+            picked.score += other.score;
+            other.eliminatedBy = picked 
         });
+    }
+
+    resolveWithOrder = (ordered) => {
+        for (let i = ordered.length - 2; i >= 0; i--) {
+            ordered[i].score += ordered[i+1].score;
+            ordered[i+1].eliminatedBy = ordered[i];
+        }
+    }
+
+    getResult() {
+        this.items.sort((itemA, itemB) => itemA.finalPosition - itemB.finalPosition);
+        return this.items;
     }
 }
 

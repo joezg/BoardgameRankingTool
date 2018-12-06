@@ -1,0 +1,15 @@
+{
+    "presets": [
+        ["env", {
+            "targets": {
+                "node": "current"
+            }
+        }]
+    ],
+    "plugins": [
+        ["transform-object-rest-spread", { "useBuiltIns": true }],
+        "@babel/plugin-proposal-class-properties"
+    ],
+    "sourceMaps": true,
+    "retainLines": true
+}

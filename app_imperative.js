@@ -1,13 +1,15 @@
-import RankingTool from "./rankingTool";
+import RankingTool from "./OldRankingTool";
 import { getRandomInt, shuffle } from "./utils";
 
-const NUMBER_OF_ITEMS = 6;
-const ITERATIONS = 1;
+const NUMBER_OF_ITEMS = 256;
+const ITERATIONS = 100000;
 const ITEMS_IN_MATCHUP = 2;
 const USE_ORDER = false;
 const HIGHEST_FIRST = false;
-const LOG_MATCHUPS = true;
-const LOG_RESULT = true;
+const LOG_MATCHUPS = false;
+const LOG_RESULT = false;
+const EDGE_CASE = false;
+const WORST_CASE = true;
 
 const generateItems = (numberOfItems) => {
     return new Array(numberOfItems).fill(0).map((e, i) => "" + i);
@@ -28,7 +30,11 @@ for (let i = 0; i < ITERATIONS; i++) {
         iterations++;
     
         if (USE_ORDER){
-            shuffle(currentMatchup);;
+            if (EDGE_CASE){
+                currentMatchup.sort((itemA, itemB) => (itemB.score - itemA.score) * (WORST_CASE ? 1 : -1));
+            } else {
+                currentMatchup = shuffle(currentMatchup);
+            }
             if (LOG_MATCHUPS){
                 console.log("**************")
                 console.log(currentMatchup);
@@ -36,7 +42,12 @@ for (let i = 0; i < ITERATIONS; i++) {
             }
             engine.resolveWithOrder(currentMatchup);
         } else {
-            let result = getRandomInt(0, currentMatchup.length -1);
+            let result = 0;
+            if (EDGE_CASE) {
+                currentMatchup.sort((itemA, itemB) => (itemB.score - itemA.score) * (WORST_CASE ? 1 : -1));
+            } else {
+                result = getRandomInt(0, currentMatchup.length -1);
+            }
             let winner = currentMatchup[result];
             if (LOG_MATCHUPS){
                 console.log("**************")
@@ -61,12 +72,14 @@ for (let i = 0; i < ITERATIONS; i++) {
     (maxIterations === null || iterations > maxIterations) && (maxIterations = iterations);
 }
 
-const endTime = process.hrtime();
+const diffTime = process.hrtime(startTime);
 
-console.log(totalIterations / ITERATIONS);
-console.log(minIterations);
-console.log(maxIterations);
+console.log(`average iterations: ${totalIterations / ITERATIONS}`);
+console.log(`min iterations: ${minIterations}`);
+console.log(`max iterations: ${maxIterations}`);
 console.log("-------------");
-const totalTime = (endTime[0] - startTime[0]) * 1000000000 + endTime[1] - startTime[1];
 
-console.log(totalTime / 1000000 / ITERATIONS);
+const totalSeconds = diffTime[0] + diffTime[1] / 1000000000;
+
+console.log(`total time (ms): ${totalSeconds * 1000}`);
+console.log(`average time (ms): ${totalSeconds * 1000 / ITERATIONS}`);

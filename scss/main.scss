@@ -1,0 +1,68 @@
+body {
+    color: #A2BCE0;
+    background-color: #5E5C6C;
+    font-family: lato sans-serif;
+    font-size: 1.2rem;
+    padding-top: 2rem;
+    padding-bottom: 1rem;
+    margin: 0px;;
+
+    .header {
+        background-color: #BEB8EB;
+        color: #5E5C6C;
+        position: fixed;
+        top: 0px;
+        height: 2rem;
+        padding: 0.5rem 0.5rem 0.5rem 1.5rem;
+        font-size: 1.5rem;
+        width: 100vw;
+    }
+
+    .main {
+        width: 80vw;
+        margin: auto;
+        padding-top: 2em;
+    }
+
+    .picking {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+
+        .choices {
+            display: flex;
+            flex-grow: 2;
+            justify-content: space-evenly;
+            button {
+                margin-right: 0.2rem;
+                width: 15rem;
+            }
+        }
+
+        .rankings {
+            height: 80vh;
+            flex-grow: 1;
+            overflow: scroll;
+        }
+    }
+
+    button {
+        color: #5E5C6C !important;
+        text-transform: uppercase;
+        text-decoration: none;
+        background: #BEB8EB;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        font-size: 1.2rem;
+        display: inline-block;
+        border: none;
+        transition: all 0.4s ease 0s;
+
+        &:hover {
+            transform: scale(1.03);
+            background: #A2BCE0;
+            box-shadow: 5px 40px -10px rgba(190,184,235,0.57);
+        }
+    }
+
+}

@@ -277,15 +277,20 @@ shuffleCandidatesCommand candidates =
 view : Model -> Html Msg
 view model =
     div []
-        [ renderHeader h1 "Boardgame Ranking Tool (aka BRT)"
+        [ renderHeader
         , renderMain model
 
         --, debugRenderModel model
         ]
 
 
-renderHeader : (List (Html.Attribute Msg) -> List (Html Msg) -> Html Msg) -> String -> Html Msg
-renderHeader h txt =
+renderHeader : Html Msg
+renderHeader =
+    div [ class "header" ] [ text "Boardgame Ranking Tool (aka BRT)" ]
+
+
+renderHeading : (List (Html.Attribute Msg) -> List (Html Msg) -> Html Msg) -> String -> Html Msg
+renderHeading h txt =
     h [] [ text txt ]
 
 
@@ -297,7 +302,7 @@ renderStrong txt =
 debugRenderModel : Model -> Html Msg
 debugRenderModel model =
     div []
-        [ renderHeader h2 "Debug data"
+        [ renderHeading h2 "Debug data"
         , dl []
             [ dt [] [ renderStrong "state" ]
             , dd [] [ debugRenderState model.state ]
@@ -393,7 +398,7 @@ renderDone model =
 
 renderSetup : Model -> List (Html Msg)
 renderSetup model =
-    [ renderHeader h2 "Welcome to BRT"
+    [ renderHeading h2 "Welcome to BRT"
     , p [] [ text "First you need to enter some boardgames to rank" ]
     , p [] [ text "Please enter all boardgames to rank in the area below, putting each boardgame name on its own line" ]
     , textarea
@@ -418,7 +423,7 @@ renderSetup model =
 
 renderConfirm : Model -> List (Html Msg)
 renderConfirm model =
-    [ renderHeader h2 "Theese are the candidates to be ranked"
+    [ renderHeading h2 "Theese are the candidates to be ranked"
     , ul [] (List.map (\obj -> li [] [ text obj.name ]) model.candidates)
     , div [] [ button [ onClick PreviewConfirm ] [ text "Start ranking" ] ]
     ]
@@ -426,10 +431,12 @@ renderConfirm model =
 
 renderPairing : Model -> List (Html Msg)
 renderPairing model =
-    [ renderHeader h2 ("Pairing nr. " ++ String.fromInt model.round)
-    , p [] [ text "From the candidates below first choose the one which should be ranked highest among them, then second highest and so on..." ]
-    , div [] (renderPairingCandidates model.choices)
-    , renderRankings model.candidates
+    [ renderHeading h2 ("Pairing nr. " ++ String.fromInt model.round)
+    , p [] [ text "From the candidates below choose the one which you like the best" ]
+    , div [ class "picking" ]
+        [ div [ class "choices" ] (renderPairingCandidates model.choices)
+        , div [ class "rankings" ] [ renderRankings model.candidates ]
+        ]
     ]
 
 

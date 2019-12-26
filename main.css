@@ -17,6 +17,11 @@ body .header {
   font-size: 1.5rem;
   width: 100vw;
 }
+body .header button {
+  position: absolute;
+  right: 2.5rem;
+  top: 0.25rem;
+}
 body .main {
   width: 80vw;
   margin: auto;
@@ -42,21 +47,33 @@ body .picking .rankings {
   overflow: scroll;
 }
 body button {
-  color: #5E5C6C !important;
   text-transform: uppercase;
   text-decoration: none;
-  background: #BEB8EB;
-  padding: 1.5rem;
   border-radius: 0.5rem;
   font-size: 1.2rem;
   display: inline-block;
   border: none;
   transition: all 0.4s ease 0s;
 }
+body button.primary {
+  color: #5E5C6C !important;
+  background: #BEB8EB;
+  padding: 1.5rem;
+}
+body button.inverse {
+  background-color: #5E5C6C;
+  color: #BEB8EB !important;
+}
+body button.small {
+  padding: 0.5rem 1rem;
+}
 body button:hover {
   transform: scale(1.03);
-  background: #A2BCE0;
+  background-color: #A2BCE0;
   box-shadow: 5px 40px -10px rgba(190, 184, 235, 0.57);
+}
+body button:hover.inverse {
+  background-color: #52505e;
 }
 
 /*# sourceMappingURL=main.css.map */

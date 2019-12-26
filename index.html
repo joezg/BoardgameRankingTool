@@ -13,7 +13,17 @@
 
 <script type="text/javascript" src="main.js"></script>
 <script>
-	var app = Elm.Main.init({ node: document.getElementById("elm") });
+  var STATE_KEY = "rankingToolState";
+
+  var data = localStorage.getItem(STATE_KEY);
+
+  var app = Elm.Main.init({ 
+    node: document.getElementById("elm"),
+    flags: JSON.parse(data)
+  });
+  app.ports.storage.subscribe(function(state){
+    localStorage.setItem(STATE_KEY, JSON.stringify(state))
+  })
 </script>
 
 </body>

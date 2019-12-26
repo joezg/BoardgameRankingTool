@@ -16,6 +16,12 @@ body {
         padding: 0.5rem 0.5rem 0.5rem 1.5rem;
         font-size: 1.5rem;
         width: 100vw;
+
+        button {
+            position: absolute;
+            right: 2.5rem;
+            top: 0.25rem;
+        }
     }
 
     .main {
@@ -47,21 +53,37 @@ body {
     }
 
     button {
-        color: #5E5C6C !important;
         text-transform: uppercase;
         text-decoration: none;
-        background: #BEB8EB;
-        padding: 1.5rem;
         border-radius: 0.5rem;
         font-size: 1.2rem;
         display: inline-block;
         border: none;
         transition: all 0.4s ease 0s;
+        
+        &.primary {
+            color: #5E5C6C !important;
+            background: #BEB8EB;
+            padding: 1.5rem;
+        }
+
+        &.inverse {
+            background-color: #5E5C6C;
+            color: #BEB8EB !important;
+        }
+        
+        &.small {
+            padding: 0.5rem 1rem;
+        }
 
         &:hover {
             transform: scale(1.03);
-            background: #A2BCE0;
+            background-color: #A2BCE0;
             box-shadow: 5px 40px -10px rgba(190,184,235,0.57);
+
+            &.inverse {
+                background-color: #52505e;
+            }
         }
     }
 

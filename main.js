@@ -5227,31 +5227,171 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
+var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $author$project$Main$NoNames = {$: 'NoNames'};
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$Main$init = function (_v0) {
-	return _Utils_Tuple2(
-		{candidates: _List_Nil, choices: _List_Nil, currentPosition: 0, round: 0, state: $author$project$Main$NoNames},
-		$elm$core$Platform$Cmd$none);
+var $author$project$Main$initialModel = {candidates: _List_Nil, choices: _List_Nil, currentPosition: 0, round: 0, state: $author$project$Main$NoNames};
+var $author$project$Main$Model = F5(
+	function (state, candidates, round, choices, currentPosition) {
+		return {candidates: candidates, choices: choices, currentPosition: currentPosition, round: round, state: state};
+	});
+var $elm_community$json_extra$Json$Decode$Extra$andMap = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
+var $author$project$Main$Candidate = F4(
+	function (name, ranking, eliminatedBy, score) {
+		return {eliminatedBy: eliminatedBy, name: name, ranking: ranking, score: score};
+	});
+var $author$project$Main$PossibleCandidate = function (a) {
+	return {$: 'PossibleCandidate', a: a};
 };
 var $elm$json$Json$Decode$field = _Json_decodeField;
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $elm$json$Json$Decode$andThen = _Json_andThen;
+var $elm$json$Json$Decode$lazy = function (thunk) {
+	return A2(
+		$elm$json$Json$Decode$andThen,
+		thunk,
+		$elm$json$Json$Decode$succeed(_Utils_Tuple0));
+};
+var $elm$json$Json$Decode$oneOf = _Json_oneOf;
+var $elm$json$Json$Decode$maybe = function (decoder) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder),
+				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
+			]));
+};
+var $elm$json$Json$Decode$null = _Json_decodeNull;
+var $elm$json$Json$Decode$nullable = function (decoder) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
+				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder)
+			]));
+};
+var $elm$json$Json$Decode$string = _Json_decodeString;
+function $author$project$Main$cyclic$possibleCandidateDecoder() {
+	return A2(
+		$elm$json$Json$Decode$map,
+		$author$project$Main$PossibleCandidate,
+		$elm$json$Json$Decode$nullable(
+			$author$project$Main$cyclic$candidateDecoder()));
+}
+function $author$project$Main$cyclic$candidateDecoder() {
+	return A2(
+		$elm_community$json_extra$Json$Decode$Extra$andMap,
+		A2($elm$json$Json$Decode$field, 'score', $elm$json$Json$Decode$int),
+		A2(
+			$elm_community$json_extra$Json$Decode$Extra$andMap,
+			A2(
+				$elm$json$Json$Decode$field,
+				'eliminatedBy',
+				$elm$json$Json$Decode$lazy(
+					function (_v0) {
+						return $author$project$Main$cyclic$possibleCandidateDecoder();
+					})),
+			A2(
+				$elm_community$json_extra$Json$Decode$Extra$andMap,
+				A2(
+					$elm$json$Json$Decode$field,
+					'ranking',
+					$elm$json$Json$Decode$maybe($elm$json$Json$Decode$int)),
+				A2(
+					$elm_community$json_extra$Json$Decode$Extra$andMap,
+					A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string),
+					$elm$json$Json$Decode$succeed($author$project$Main$Candidate)))));
+}
+try {
+	var $author$project$Main$possibleCandidateDecoder = $author$project$Main$cyclic$possibleCandidateDecoder();
+	$author$project$Main$cyclic$possibleCandidateDecoder = function () {
+		return $author$project$Main$possibleCandidateDecoder;
+	};
+	var $author$project$Main$candidateDecoder = $author$project$Main$cyclic$candidateDecoder();
+	$author$project$Main$cyclic$candidateDecoder = function () {
+		return $author$project$Main$candidateDecoder;
+	};
+} catch ($) {
+	throw 'Some top-level definitions from `Main` are causing infinite recursion:\n\n  ┌─────┐\n  │    possibleCandidateDecoder\n  │     ↓\n  │    candidateDecoder\n  └─────┘\n\nThese errors are very tricky, so read https://elm-lang.org/0.19.1/bad-recursion to learn how to fix it!';}
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$Main$Done = {$: 'Done'};
+var $author$project$Main$Preview = {$: 'Preview'};
+var $author$project$Main$ShowPairing = {$: 'ShowPairing'};
+var $author$project$Main$stateDecoder = function () {
+	var stringToState = function (str) {
+		switch (str) {
+			case 'NoNames':
+				return $elm$json$Json$Decode$succeed($author$project$Main$NoNames);
+			case 'Preview':
+				return $elm$json$Json$Decode$succeed($author$project$Main$Preview);
+			case 'ShowPairing':
+				return $elm$json$Json$Decode$succeed($author$project$Main$ShowPairing);
+			case 'Done':
+				return $elm$json$Json$Decode$succeed($author$project$Main$Done);
+			default:
+				return $elm$json$Json$Decode$succeed($author$project$Main$NoNames);
+		}
+	};
+	return A2($elm$json$Json$Decode$andThen, stringToState, $elm$json$Json$Decode$string);
+}();
+var $author$project$Main$modelDecoder = A2(
+	$elm_community$json_extra$Json$Decode$Extra$andMap,
+	A2($elm$json$Json$Decode$field, 'currentPosition', $elm$json$Json$Decode$int),
+	A2(
+		$elm_community$json_extra$Json$Decode$Extra$andMap,
+		A2(
+			$elm$json$Json$Decode$field,
+			'choices',
+			$elm$json$Json$Decode$list($author$project$Main$candidateDecoder)),
+		A2(
+			$elm_community$json_extra$Json$Decode$Extra$andMap,
+			A2($elm$json$Json$Decode$field, 'round', $elm$json$Json$Decode$int),
+			A2(
+				$elm_community$json_extra$Json$Decode$Extra$andMap,
+				A2(
+					$elm$json$Json$Decode$field,
+					'candidates',
+					$elm$json$Json$Decode$list($author$project$Main$candidateDecoder)),
+				A2(
+					$elm_community$json_extra$Json$Decode$Extra$andMap,
+					A2($elm$json$Json$Decode$field, 'state', $author$project$Main$stateDecoder),
+					$elm$json$Json$Decode$succeed($author$project$Main$Model))))));
+var $author$project$Main$decodeModel = function (value) {
+	var decoded = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$modelDecoder, value);
+	if (decoded.$ === 'Ok') {
+		var v = decoded.a;
+		return v;
+	} else {
+		return $author$project$Main$initialModel;
+	}
+};
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Main$init = function (data) {
+	return _Utils_Tuple2(
+		$author$project$Main$decodeModel(data),
+		$elm$core$Platform$Cmd$none);
+};
+var $author$project$Main$Left = {$: 'Left'};
+var $author$project$Main$Middle = {$: 'Middle'};
 var $author$project$Main$None = {$: 'None'};
+var $author$project$Main$Pressed = function (a) {
+	return {$: 'Pressed', a: a};
+};
+var $author$project$Main$Right = {$: 'Right'};
 var $author$project$Main$keyToMsg = function (string) {
 	switch (string) {
 		case 'ArrowRight':
-			return $author$project$Main$None;
+			return $author$project$Main$Pressed($author$project$Main$Right);
 		case 'ArrowLeft':
-			return $author$project$Main$None;
+			return $author$project$Main$Pressed($author$project$Main$Left);
 		case 'ArrowUp':
-			return $author$project$Main$None;
+			return $author$project$Main$Pressed($author$project$Main$Middle);
 		case 'ArrowDown':
-			return $author$project$Main$None;
+			return $author$project$Main$Pressed($author$project$Main$Middle);
 		default:
 			return $author$project$Main$None;
 	}
 };
-var $elm$json$Json$Decode$string = _Json_decodeString;
 var $author$project$Main$keyDecoder = A2(
 	$elm$json$Json$Decode$map,
 	$author$project$Main$keyToMsg,
@@ -5660,7 +5800,87 @@ var $elm$browser$Browser$Events$onKeyDown = A2($elm$browser$Browser$Events$on, $
 var $author$project$Main$subscriptions = function (_v0) {
 	return $elm$browser$Browser$Events$onKeyDown($author$project$Main$keyDecoder);
 };
-var $author$project$Main$Preview = {$: 'Preview'};
+var $elm$core$Array$fromListHelp = F3(
+	function (list, nodeList, nodeListSize) {
+		fromListHelp:
+		while (true) {
+			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, list);
+			var jsArray = _v0.a;
+			var remainingItems = _v0.b;
+			if (_Utils_cmp(
+				$elm$core$Elm$JsArray$length(jsArray),
+				$elm$core$Array$branchFactor) < 0) {
+				return A2(
+					$elm$core$Array$builderToArray,
+					true,
+					{nodeList: nodeList, nodeListSize: nodeListSize, tail: jsArray});
+			} else {
+				var $temp$list = remainingItems,
+					$temp$nodeList = A2(
+					$elm$core$List$cons,
+					$elm$core$Array$Leaf(jsArray),
+					nodeList),
+					$temp$nodeListSize = nodeListSize + 1;
+				list = $temp$list;
+				nodeList = $temp$nodeList;
+				nodeListSize = $temp$nodeListSize;
+				continue fromListHelp;
+			}
+		}
+	});
+var $elm$core$Array$fromList = function (list) {
+	if (!list.b) {
+		return $elm$core$Array$empty;
+	} else {
+		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
+	}
+};
+var $elm$core$Bitwise$and = _Bitwise_and;
+var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
+var $elm$core$Array$bitMask = 4294967295 >>> (32 - $elm$core$Array$shiftStep);
+var $elm$core$Basics$ge = _Utils_ge;
+var $elm$core$Elm$JsArray$unsafeGet = _JsArray_unsafeGet;
+var $elm$core$Array$getHelp = F3(
+	function (shift, index, tree) {
+		getHelp:
+		while (true) {
+			var pos = $elm$core$Array$bitMask & (index >>> shift);
+			var _v0 = A2($elm$core$Elm$JsArray$unsafeGet, pos, tree);
+			if (_v0.$ === 'SubTree') {
+				var subTree = _v0.a;
+				var $temp$shift = shift - $elm$core$Array$shiftStep,
+					$temp$index = index,
+					$temp$tree = subTree;
+				shift = $temp$shift;
+				index = $temp$index;
+				tree = $temp$tree;
+				continue getHelp;
+			} else {
+				var values = _v0.a;
+				return A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, values);
+			}
+		}
+	});
+var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
+var $elm$core$Array$tailIndex = function (len) {
+	return (len >>> 5) << 5;
+};
+var $elm$core$Array$get = F2(
+	function (index, _v0) {
+		var len = _v0.a;
+		var startShift = _v0.b;
+		var tree = _v0.c;
+		var tail = _v0.d;
+		return ((index < 0) || (_Utils_cmp(index, len) > -1)) ? $elm$core$Maybe$Nothing : ((_Utils_cmp(
+			index,
+			$elm$core$Array$tailIndex(len)) > -1) ? $elm$core$Maybe$Just(
+			A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, tail)) : $elm$core$Maybe$Just(
+			A3($elm$core$Array$getHelp, startShift, index, tree)));
+	});
+var $elm$core$Array$length = function (_v0) {
+	var len = _v0.a;
+	return len;
+};
 var $elm$core$String$lines = _String_lines;
 var $elm$core$Basics$composeR = F3(
 	function (f, g, x) {
@@ -5678,9 +5898,6 @@ var $elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
-var $author$project$Main$PossibleCandidate = function (a) {
-	return {$: 'PossibleCandidate', a: a};
-};
 var $author$project$Main$nameToCandidate = function (name) {
 	return {
 		eliminatedBy: $author$project$Main$PossibleCandidate($elm$core$Maybe$Nothing),
@@ -5702,8 +5919,6 @@ var $author$project$Main$namesToCandidates = function (names) {
 		trimmed);
 	return A2($elm$core$List$map, $author$project$Main$nameToCandidate, filtered);
 };
-var $author$project$Main$Done = {$: 'Done'};
-var $author$project$Main$ShowPairing = {$: 'ShowPairing'};
 var $author$project$Main$Impossible = {$: 'Impossible'};
 var $author$project$Main$JustOne = function (a) {
 	return {$: 'JustOne', a: a};
@@ -5878,7 +6093,6 @@ var $elm$random$Random$Seed = F2(
 	function (a, b) {
 		return {$: 'Seed', a: a, b: b};
 	});
-var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
 var $elm$random$Random$next = function (_v0) {
 	var state0 = _v0.a;
 	var incr = _v0.b;
@@ -5978,42 +6192,6 @@ var $elm$random$Random$generate = F2(
 			$elm$random$Random$Generate(
 				A2($elm$random$Random$map, tagger, generator)));
 	});
-var $elm$core$Array$fromListHelp = F3(
-	function (list, nodeList, nodeListSize) {
-		fromListHelp:
-		while (true) {
-			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, list);
-			var jsArray = _v0.a;
-			var remainingItems = _v0.b;
-			if (_Utils_cmp(
-				$elm$core$Elm$JsArray$length(jsArray),
-				$elm$core$Array$branchFactor) < 0) {
-				return A2(
-					$elm$core$Array$builderToArray,
-					true,
-					{nodeList: nodeList, nodeListSize: nodeListSize, tail: jsArray});
-			} else {
-				var $temp$list = remainingItems,
-					$temp$nodeList = A2(
-					$elm$core$List$cons,
-					$elm$core$Array$Leaf(jsArray),
-					nodeList),
-					$temp$nodeListSize = nodeListSize + 1;
-				list = $temp$list;
-				nodeList = $temp$nodeList;
-				nodeListSize = $temp$nodeListSize;
-				continue fromListHelp;
-			}
-		}
-	});
-var $elm$core$Array$fromList = function (list) {
-	if (!list.b) {
-		return $elm$core$Array$empty;
-	} else {
-		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
-	}
-};
-var $elm$core$Bitwise$and = _Bitwise_and;
 var $elm$core$Basics$negate = function (n) {
 	return -n;
 };
@@ -6055,10 +6233,6 @@ var $elm$random$Random$int = F2(
 				}
 			});
 	});
-var $elm$core$Array$length = function (_v0) {
-	var len = _v0.a;
-	return len;
-};
 var $elm$random$Random$listHelp = F4(
 	function (revList, n, gen, seed) {
 		listHelp:
@@ -6145,46 +6319,6 @@ var $owanturist$elm_union_find$UnionFind$find = F2(
 	function (id, _v0) {
 		var dict = _v0.b;
 		return A2($owanturist$elm_union_find$UnionFind$findFast, id, dict);
-	});
-var $elm$core$Array$bitMask = 4294967295 >>> (32 - $elm$core$Array$shiftStep);
-var $elm$core$Basics$ge = _Utils_ge;
-var $elm$core$Elm$JsArray$unsafeGet = _JsArray_unsafeGet;
-var $elm$core$Array$getHelp = F3(
-	function (shift, index, tree) {
-		getHelp:
-		while (true) {
-			var pos = $elm$core$Array$bitMask & (index >>> shift);
-			var _v0 = A2($elm$core$Elm$JsArray$unsafeGet, pos, tree);
-			if (_v0.$ === 'SubTree') {
-				var subTree = _v0.a;
-				var $temp$shift = shift - $elm$core$Array$shiftStep,
-					$temp$index = index,
-					$temp$tree = subTree;
-				shift = $temp$shift;
-				index = $temp$index;
-				tree = $temp$tree;
-				continue getHelp;
-			} else {
-				var values = _v0.a;
-				return A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, values);
-			}
-		}
-	});
-var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
-var $elm$core$Array$tailIndex = function (len) {
-	return (len >>> 5) << 5;
-};
-var $elm$core$Array$get = F2(
-	function (index, _v0) {
-		var len = _v0.a;
-		var startShift = _v0.b;
-		var tree = _v0.c;
-		var tail = _v0.d;
-		return ((index < 0) || (_Utils_cmp(index, len) > -1)) ? $elm$core$Maybe$Nothing : ((_Utils_cmp(
-			index,
-			$elm$core$Array$tailIndex(len)) > -1) ? $elm$core$Maybe$Just(
-			A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, tail)) : $elm$core$Maybe$Just(
-			A3($elm$core$Array$getHelp, startShift, index, tree)));
 	});
 var $elm$core$Array$isEmpty = function (_v0) {
 	var len = _v0.a;
@@ -6282,22 +6416,139 @@ var $author$project$Main$shuffleCandidatesCommand = function (candidates) {
 		$author$project$Main$Shuffled,
 		$elm_community$random_extra$Random$List$shuffle(candidates));
 };
+var $elm$json$Json$Encode$null = _Json_encodeNull;
+var $author$project$Main$encodeMaybe = F2(
+	function (f, a) {
+		if (a.$ === 'Just') {
+			var val = a.a;
+			return f(val);
+		} else {
+			return $elm$json$Json$Encode$null;
+		}
+	});
+var $elm$json$Json$Encode$int = _Json_wrap;
+var $elm$json$Json$Encode$object = function (pairs) {
+	return _Json_wrap(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, obj) {
+					var k = _v0.a;
+					var v = _v0.b;
+					return A3(_Json_addField, k, v, obj);
+				}),
+			_Json_emptyObject(_Utils_Tuple0),
+			pairs));
+};
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Main$encodeCandidate = function (_v2) {
+	var name = _v2.name;
+	var ranking = _v2.ranking;
+	var score = _v2.score;
+	var eliminatedBy = _v2.eliminatedBy;
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'name',
+				$elm$json$Json$Encode$string(name)),
+				_Utils_Tuple2(
+				'ranking',
+				A2($author$project$Main$encodeMaybe, $elm$json$Json$Encode$int, ranking)),
+				_Utils_Tuple2(
+				'eliminatedBy',
+				$author$project$Main$encodePossibleCandidate(eliminatedBy)),
+				_Utils_Tuple2(
+				'score',
+				$elm$json$Json$Encode$int(score))
+			]));
+};
+var $author$project$Main$encodePossibleCandidate = function (possibleCandidate) {
+	var unwrapped = function () {
+		var c = possibleCandidate.a;
+		return c;
+	}();
+	if (unwrapped.$ === 'Nothing') {
+		return $elm$json$Json$Encode$null;
+	} else {
+		var c = unwrapped.a;
+		return $author$project$Main$encodeCandidate(c);
+	}
+};
+var $author$project$Main$encodeState = function (state) {
+	var val = function () {
+		switch (state.$) {
+			case 'NoNames':
+				return 'NoNames';
+			case 'Preview':
+				return 'Preview';
+			case 'ShowPairing':
+				return 'ShowPairing';
+			default:
+				return 'Done';
+		}
+	}();
+	return $elm$json$Json$Encode$string(val);
+};
+var $elm$json$Json$Encode$list = F2(
+	function (func, entries) {
+		return _Json_wrap(
+			A3(
+				$elm$core$List$foldl,
+				_Json_addEntry(func),
+				_Json_emptyArray(_Utils_Tuple0),
+				entries));
+	});
+var $author$project$Main$encodeModel = function (_v0) {
+	var state = _v0.state;
+	var candidates = _v0.candidates;
+	var choices = _v0.choices;
+	var round = _v0.round;
+	var currentPosition = _v0.currentPosition;
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'state',
+				$author$project$Main$encodeState(state)),
+				_Utils_Tuple2(
+				'candidates',
+				A2($elm$json$Json$Encode$list, $author$project$Main$encodeCandidate, candidates)),
+				_Utils_Tuple2(
+				'choices',
+				A2($elm$json$Json$Encode$list, $author$project$Main$encodeCandidate, choices)),
+				_Utils_Tuple2(
+				'round',
+				$elm$json$Json$Encode$int(round)),
+				_Utils_Tuple2(
+				'currentPosition',
+				$elm$json$Json$Encode$int(currentPosition))
+			]));
+};
+var $author$project$Main$storage = _Platform_outgoingPort('storage', $elm$core$Basics$identity);
+var $author$project$Main$storeModel = function (model) {
+	return $author$project$Main$storage(
+		$author$project$Main$encodeModel(model));
+};
+var $author$project$Main$updateWithStore = function (model) {
+	return _Utils_Tuple2(
+		model,
+		$author$project$Main$storeModel(model));
+};
 var $author$project$Main$resolveNextPairing = function (model) {
 	var _v0 = A2($author$project$Main$getPairing, 3, model.candidates);
 	switch (_v0.$) {
 		case 'Next':
 			var choices = _v0.a;
-			return _Utils_Tuple2(
+			return $author$project$Main$updateWithStore(
 				_Utils_update(
 					model,
-					{choices: choices, round: model.round + 1, state: $author$project$Main$ShowPairing}),
-				$elm$core$Platform$Cmd$none);
+					{choices: choices, round: model.round + 1, state: $author$project$Main$ShowPairing}));
 		case 'Impossible':
-			return _Utils_Tuple2(
+			return $author$project$Main$updateWithStore(
 				_Utils_update(
 					model,
-					{state: $author$project$Main$Done}),
-				$elm$core$Platform$Cmd$none);
+					{state: $author$project$Main$Done}));
 		default:
 			var last = _v0.a;
 			var resolveCandidate = function (candidate) {
@@ -6379,22 +6630,22 @@ var $author$project$Main$update = F2(
 		switch (msg.$) {
 			case 'None':
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			case 'Restart':
+				return $author$project$Main$updateWithStore($author$project$Main$initialModel);
 			case 'Start':
-				return _Utils_Tuple2(
+				return $author$project$Main$updateWithStore(
 					_Utils_update(
 						model,
-						{state: $author$project$Main$Preview}),
-					$elm$core$Platform$Cmd$none);
+						{state: $author$project$Main$Preview}));
 			case 'RawCandidates':
 				var raw = msg.a;
 				var names = $elm$core$String$lines(raw);
-				return _Utils_Tuple2(
+				return $author$project$Main$updateWithStore(
 					_Utils_update(
 						model,
 						{
 							candidates: $author$project$Main$namesToCandidates(names)
-						}),
-					$elm$core$Platform$Cmd$none);
+						}));
 			case 'Shuffled':
 				var candidates = msg.a;
 				return $author$project$Main$resolveNextPairing(
@@ -6407,13 +6658,39 @@ var $author$project$Main$update = F2(
 						model,
 						{currentPosition: 1}),
 					$author$project$Main$shuffleCandidatesCommand(model.candidates));
-			default:
+			case 'Pick':
 				var candidate = msg.a;
 				return A2($author$project$Main$resolvePick, model, candidate);
+			default:
+				var position = msg.a;
+				var _v1 = model.state;
+				if (_v1.$ === 'ShowPairing') {
+					var choiceArray = $elm$core$Array$fromList(model.choices);
+					var candidate = function () {
+						switch (position.$) {
+							case 'Left':
+								return A2($elm$core$Array$get, 0, choiceArray);
+							case 'Right':
+								return ($elm$core$Array$length(choiceArray) === 2) ? A2($elm$core$Array$get, 1, choiceArray) : A2($elm$core$Array$get, 2, choiceArray);
+							default:
+								return A2($elm$core$Array$get, 1, choiceArray);
+						}
+					}();
+					if (candidate.$ === 'Just') {
+						var c = candidate.a;
+						return A2($author$project$Main$resolvePick, model, c);
+					} else {
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					}
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 		}
 	});
+var $elm$json$Json$Decode$value = _Json_decodeValue;
 var $elm$html$Html$div = _VirtualDom_node('div');
-var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Main$Restart = {$: 'Restart'};
+var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
 		return A2(
@@ -6422,22 +6699,6 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 			$elm$json$Json$Encode$string(string));
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
-var $author$project$Main$renderHeader = A2(
-	$elm$html$Html$div,
-	_List_fromArray(
-		[
-			$elm$html$Html$Attributes$class('header')
-		]),
-	_List_fromArray(
-		[
-			$elm$html$Html$text('Boardgame Ranking Tool (aka BRT)')
-		]));
-var $author$project$Main$PreviewConfirm = {$: 'PreviewConfirm'};
-var $elm$html$Html$button = _VirtualDom_node('button');
-var $elm$html$Html$h2 = _VirtualDom_node('h2');
-var $elm$html$Html$li = _VirtualDom_node('li');
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
 };
@@ -6455,6 +6716,32 @@ var $elm$html$Html$Events$onClick = function (msg) {
 		'click',
 		$elm$json$Json$Decode$succeed(msg));
 };
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Main$renderHeader = A2(
+	$elm$html$Html$div,
+	_List_fromArray(
+		[
+			$elm$html$Html$Attributes$class('header')
+		]),
+	_List_fromArray(
+		[
+			$elm$html$Html$text('Boardgame Ranking Tool (aka BRT)'),
+			A2(
+			$elm$html$Html$button,
+			_List_fromArray(
+				[
+					$elm$html$Html$Events$onClick($author$project$Main$Restart),
+					$elm$html$Html$Attributes$class('small inverse')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text('Restart')
+				]))
+		]));
+var $author$project$Main$PreviewConfirm = {$: 'PreviewConfirm'};
+var $elm$html$Html$h2 = _VirtualDom_node('h2');
+var $elm$html$Html$li = _VirtualDom_node('li');
 var $author$project$Main$renderHeading = F2(
 	function (h, txt) {
 		return A2(
@@ -6494,7 +6781,8 @@ var $author$project$Main$renderConfirm = function (model) {
 					$elm$html$Html$button,
 					_List_fromArray(
 						[
-							$elm$html$Html$Events$onClick($author$project$Main$PreviewConfirm)
+							$elm$html$Html$Events$onClick($author$project$Main$PreviewConfirm),
+							$elm$html$Html$Attributes$class('primary')
 						]),
 					_List_fromArray(
 						[
@@ -6562,7 +6850,8 @@ var $author$project$Main$renderPairingCandidate = function (candidate) {
 		_List_fromArray(
 			[
 				$elm$html$Html$Events$onClick(
-				$author$project$Main$Pick(candidate))
+				$author$project$Main$Pick(candidate)),
+				$elm$html$Html$Attributes$class('primary')
 			]),
 		_List_fromArray(
 			[
@@ -6711,7 +7000,8 @@ var $author$project$Main$renderSetup = function (model) {
 			$elm$html$Html$button,
 			_List_fromArray(
 				[
-					$elm$html$Html$Events$onClick($author$project$Main$Start)
+					$elm$html$Html$Events$onClick($author$project$Main$Start),
+					$elm$html$Html$Attributes$class('primary')
 				]),
 			_List_fromArray(
 				[
@@ -6752,5 +7042,4 @@ var $author$project$Main$view = function (model) {
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))(0)}});}(this));
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)(0)}});}(this));

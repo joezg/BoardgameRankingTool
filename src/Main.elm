@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Array
 import Browser
@@ -7,15 +7,98 @@ import Html exposing (Html, button, dd, div, dl, dt, h2, li, ol, p, strong, text
 import Html.Attributes exposing (class, cols, rows)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
+import Json.Decode.Extra exposing (andMap)
+import Json.Encode as Encode
 import Random
 import Random.List exposing (shuffle)
 
 
+port storage : Encode.Value -> Cmd msg
 
+
+storeModel : Model -> Cmd msg
+storeModel model =
+    storage (encodeModel model)
+
+
+encodeModel : Model -> Encode.Value
+encodeModel { state, candidates, choices, round, currentPosition } =
+    Encode.object
+        [ ( "state", encodeState state )
+        , ( "candidates", Encode.list encodeCandidate candidates )
+        , ( "choices", Encode.list encodeCandidate choices )
+        , ( "round", Encode.int round )
+        , ( "currentPosition", Encode.int currentPosition )
+        ]
+
+
+encodeState : State -> Encode.Value
+encodeState state =
+    let
+        val =
+            case state of
+                NoNames ->
+                    "NoNames"
+
+                Preview ->
+                    "Preview"
+
+                ShowPairing ->
+                    "ShowPairing"
+
+                Done ->
+                    "Done"
+    in
+    Encode.string val
+
+
+encodeCandidate : Candidate -> Encode.Value
+encodeCandidate { name, ranking, score, eliminatedBy } =
+    Encode.object
+        [ ( "name", Encode.string name )
+        , ( "ranking", encodeMaybe Encode.int ranking )
+        , ( "eliminatedBy", encodePossibleCandidate eliminatedBy )
+        , ( "score", Encode.int score )
+        ]
+
+
+encodePossibleCandidate : PossibleCandidate -> Encode.Value
+encodePossibleCandidate possibleCandidate =
+    let
+        unwrapped =
+            case possibleCandidate of
+                PossibleCandidate c ->
+                    c
+    in
+    case unwrapped of
+        Nothing ->
+            Encode.null
+
+        Just c ->
+            encodeCandidate c
+
+
+encodeMaybe : (a -> Encode.Value) -> Maybe a -> Encode.Value
+encodeMaybe f a =
+    case a of
+        Just val ->
+            f val
+
+        Nothing ->
+            Encode.null
+
+
+
+-- { state : State
+--     , candidates : List Candidate
+--     , round : Int
+--     , choices : List Candidate
+--     , currentPosition : Int
+--     }
 -- MAIN
 
 
-main : Program () Model Msg
+main : Program Decode.Value Model Msg
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
 
@@ -133,10 +216,10 @@ resolveNextPairing : Model -> ( Model, Cmd Msg )
 resolveNextPairing model =
     case getPairing 3 model.candidates of
         Next choices ->
-            ( { model | choices = choices, state = ShowPairing, round = model.round + 1 }, Cmd.none )
+            updateWithStore { model | choices = choices, state = ShowPairing, round = model.round + 1 }
 
         Impossible ->
-            ( { model | state = Done }, Cmd.none )
+            updateWithStore { model | state = Done }
 
         JustOne last ->
             let
@@ -215,16 +298,81 @@ type State
     | Done
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( { state = NoNames
-      , candidates = []
-      , round = 0
-      , currentPosition = 0
-      , choices = []
-      }
-    , Cmd.none
-    )
+init : Decode.Value -> ( Model, Cmd Msg )
+init data =
+    ( decodeModel data, Cmd.none )
+
+
+initialModel : Model
+initialModel =
+    { state = NoNames
+    , candidates = []
+    , round = 0
+    , currentPosition = 0
+    , choices = []
+    }
+
+
+modelDecoder : Decode.Decoder Model
+modelDecoder =
+    Decode.succeed Model
+        |> andMap (Decode.field "state" stateDecoder)
+        |> andMap (Decode.field "candidates" (Decode.list candidateDecoder))
+        |> andMap (Decode.field "round" Decode.int)
+        |> andMap (Decode.field "choices" (Decode.list candidateDecoder))
+        |> andMap (Decode.field "currentPosition" Decode.int)
+
+
+decodeModel : Decode.Value -> Model
+decodeModel value =
+    let
+        decoded =
+            Decode.decodeValue modelDecoder value
+    in
+    case decoded of
+        Ok v ->
+            v
+
+        Err _ ->
+            initialModel
+
+
+candidateDecoder : Decode.Decoder Candidate
+candidateDecoder =
+    Decode.succeed Candidate
+        |> andMap (Decode.field "name" Decode.string)
+        |> andMap (Decode.field "ranking" (Decode.maybe Decode.int))
+        |> andMap (Decode.field "eliminatedBy" (Decode.lazy (\_ -> possibleCandidateDecoder)))
+        |> andMap (Decode.field "score" Decode.int)
+
+
+possibleCandidateDecoder : Decode.Decoder PossibleCandidate
+possibleCandidateDecoder =
+    Decode.nullable candidateDecoder |> Decode.map PossibleCandidate
+
+
+stateDecoder : Decode.Decoder State
+stateDecoder =
+    let
+        stringToState : String -> Decode.Decoder State
+        stringToState str =
+            case str of
+                "NoNames" ->
+                    Decode.succeed NoNames
+
+                "Preview" ->
+                    Decode.succeed Preview
+
+                "ShowPairing" ->
+                    Decode.succeed ShowPairing
+
+                "Done" ->
+                    Decode.succeed Done
+
+                _ ->
+                    Decode.succeed NoNames
+    in
+    Decode.string |> Decode.andThen stringToState
 
 
 
@@ -234,6 +382,7 @@ init _ =
 type Msg
     = None
     | Start
+    | Restart
     | RawCandidates String
     | PreviewConfirm
     | Shuffled (List Candidate)
@@ -247,21 +396,29 @@ type Position
     | Right
 
 
+updateWithStore : Model -> ( Model, Cmd Msg )
+updateWithStore model =
+    ( model, storeModel model )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         None ->
             ( model, Cmd.none )
 
+        Restart ->
+            updateWithStore initialModel
+
         Start ->
-            ( { model | state = Preview }, Cmd.none )
+            updateWithStore { model | state = Preview }
 
         RawCandidates raw ->
             let
                 names =
                     String.lines raw
             in
-            ( { model | candidates = namesToCandidates names }, Cmd.none )
+            updateWithStore { model | candidates = namesToCandidates names }
 
         Shuffled candidates ->
             resolveNextPairing { model | candidates = candidates }
@@ -326,7 +483,10 @@ view model =
 
 renderHeader : Html Msg
 renderHeader =
-    div [ class "header" ] [ text "Boardgame Ranking Tool (aka BRT)" ]
+    div [ class "header" ]
+        [ text "Boardgame Ranking Tool (aka BRT)"
+        , button [ onClick Restart, class "small inverse" ] [ text "Restart" ]
+        ]
 
 
 renderHeading : (List (Html.Attribute Msg) -> List (Html Msg) -> Html Msg) -> String -> Html Msg
@@ -457,7 +617,7 @@ renderSetup model =
                 ]
             )
         ]
-    , button [ onClick Start ] [ text "Done" ]
+    , button [ onClick Start, class "primary" ] [ text "Done" ]
     ]
 
 
@@ -465,7 +625,7 @@ renderConfirm : Model -> List (Html Msg)
 renderConfirm model =
     [ renderHeading h2 "Theese are the candidates to be ranked"
     , ul [] (List.map (\obj -> li [] [ text obj.name ]) model.candidates)
-    , div [] [ button [ onClick PreviewConfirm ] [ text "Start ranking" ] ]
+    , div [] [ button [ onClick PreviewConfirm, class "primary" ] [ text "Start ranking" ] ]
     ]
 
 
@@ -517,4 +677,4 @@ renderPairingCandidates candidates =
 
 renderPairingCandidate : Candidate -> Html Msg
 renderPairingCandidate candidate =
-    button [ onClick (Pick candidate) ] [ text candidate.name ]
+    button [ onClick (Pick candidate), class "primary" ] [ text candidate.name ]

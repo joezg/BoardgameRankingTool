@@ -1,8 +1,9 @@
 module Main exposing (main)
 
+import Array
 import Browser
 import Browser.Events exposing (onKeyDown)
-import Html exposing (Html, button, dd, div, dl, dt, h1, h2, li, ol, p, strong, text, textarea, ul)
+import Html exposing (Html, button, dd, div, dl, dt, h2, li, ol, p, strong, text, textarea, ul)
 import Html.Attributes exposing (class, cols, rows)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
@@ -37,16 +38,16 @@ keyToMsg : String -> Msg
 keyToMsg string =
     case string of
         "ArrowRight" ->
-            None
+            Pressed Right
 
         "ArrowLeft" ->
-            None
+            Pressed Left
 
         "ArrowUp" ->
-            None
+            Pressed Middle
 
         "ArrowDown" ->
-            None
+            Pressed Middle
 
         _ ->
             None
@@ -237,6 +238,13 @@ type Msg
     | PreviewConfirm
     | Shuffled (List Candidate)
     | Pick Candidate
+    | Pressed Position
+
+
+type Position
+    = Left
+    | Middle
+    | Right
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -263,6 +271,38 @@ update msg model =
 
         Pick candidate ->
             resolvePick model candidate
+
+        Pressed position ->
+            case model.state of
+                ShowPairing ->
+                    let
+                        choiceArray =
+                            Array.fromList model.choices
+
+                        candidate =
+                            case position of
+                                Left ->
+                                    Array.get 0 choiceArray
+
+                                Right ->
+                                    if Array.length choiceArray == 2 then
+                                        Array.get 1 choiceArray
+
+                                    else
+                                        Array.get 2 choiceArray
+
+                                Middle ->
+                                    Array.get 1 choiceArray
+                    in
+                    case candidate of
+                        Just c ->
+                            resolvePick model c
+
+                        _ ->
+                            ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 shuffleCandidatesCommand : List Candidate -> Cmd Msg

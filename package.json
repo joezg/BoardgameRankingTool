@@ -10,7 +10,7 @@
     "@babel/register": "^7.0.0",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "babel-preset-env": "^1.7.0",
-    "immer": "^2.1.5"
+    "immer": "^9.0.6"
   },
   "scripts": {
     "start": "node index.js"

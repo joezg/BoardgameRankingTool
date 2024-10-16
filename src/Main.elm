@@ -3,8 +3,8 @@ port module Main exposing (main)
 import Array
 import Browser
 import Browser.Events exposing (onKeyDown)
-import Html exposing (Html, button, dd, div, dl, dt, h2, li, ol, p, strong, text, textarea, ul)
-import Html.Attributes exposing (class, cols, rows)
+import Html exposing (Html, button, dd, div, dl, dt, h2, li, ol, p, br, strong, text, textarea, ul, a)
+import Html.Attributes exposing (class, cols, rows, href)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
 import Json.Decode.Extra exposing (andMap)
@@ -22,15 +22,24 @@ storeModel model =
 
 
 encodeModel : Model -> Encode.Value
-encodeModel { state, candidates, choices, round, currentPosition } =
+encodeModel { state, candidates, choices, round, currentPosition, previous } =
     Encode.object
         [ ( "state", encodeState state )
         , ( "candidates", Encode.list encodeCandidate candidates )
         , ( "choices", Encode.list encodeCandidate choices )
         , ( "round", Encode.int round )
         , ( "currentPosition", Encode.int currentPosition )
+        , ( "previous", encodePreviousModel previous )
         ]
 
+encodePreviousModel : PreviousModel -> Encode.Value
+encodePreviousModel (PreviousModel pm) =
+    case pm of
+        Nothing ->
+            Encode.null
+
+        Just model ->
+            encodeModel model
 
 encodeState : State -> Encode.Value
 encodeState state =
@@ -146,8 +155,10 @@ type alias Model =
     , round : Int
     , choices : List Candidate
     , currentPosition : Int
+    , previous : PreviousModel
     }
 
+type PreviousModel = PreviousModel(Maybe Model)
 
 type alias Candidate =
     { name : String
@@ -181,10 +192,9 @@ namesToCandidates names =
     in
     List.map nameToCandidate filtered
 
-
-getPairing : Int -> List Candidate -> Pairing
-getPairing number candidates =
-    let
+availableCandidates : List Candidate -> List Candidate
+availableCandidates candidates =
+    let 
         isAvailable : Candidate -> Bool
         isAvailable candidate =
             let
@@ -194,14 +204,16 @@ getPairing number candidates =
                             c
             in
             candidate.ranking == Nothing && eliminatedBy == Nothing
-
-        available =
-            List.filter isAvailable candidates
-
-        sorted =
-            List.sortBy .score available |> List.reverse
     in
-    case available of
+        List.filter isAvailable candidates
+
+getPairing : Int -> List Candidate -> Pairing
+getPairing number candidates =
+    let
+        sorted = candidates |> availableCandidates |> List.sortBy .score |> List.reverse
+    
+    in
+    case sorted of
         [] ->
             Impossible
 
@@ -310,6 +322,7 @@ initialModel =
     , round = 0
     , currentPosition = 0
     , choices = []
+    , previous = PreviousModel(Nothing)
     }
 
 
@@ -321,6 +334,11 @@ modelDecoder =
         |> andMap (Decode.field "round" Decode.int)
         |> andMap (Decode.field "choices" (Decode.list candidateDecoder))
         |> andMap (Decode.field "currentPosition" Decode.int)
+        |> andMap (Decode.field "previous" previousDecoder)
+    
+previousDecoder : Decode.Decoder PreviousModel
+previousDecoder =
+    Decode.nullable (Decode.lazy (\_ -> modelDecoder)) |> Decode.map PreviousModel
 
 
 decodeModel : Decode.Value -> Model
@@ -387,7 +405,9 @@ type Msg
     | PreviewConfirm
     | Shuffled (List Candidate)
     | Pick Candidate
+    | Delete Candidate
     | Pressed Position
+    | Undo
 
 
 type Position
@@ -400,6 +420,12 @@ updateWithStore : Model -> ( Model, Cmd Msg )
 updateWithStore model =
     ( model, storeModel model )
 
+savePreviousModel : Model -> Model
+savePreviousModel model =
+    let previousModel = {model | previous = PreviousModel(Nothing)}
+
+    in 
+    { model | previous = PreviousModel(Just previousModel) }
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -427,7 +453,19 @@ update msg model =
             ( { model | currentPosition = 1 }, shuffleCandidatesCommand model.candidates )
 
         Pick candidate ->
-            resolvePick model candidate
+            resolvePick (savePreviousModel model) candidate
+
+        Delete candidate ->
+            let
+                notNamed: String -> Candidate -> Bool
+                notNamed name c =
+                    c.name /= name
+
+                savedModel = savePreviousModel model
+
+                newModel = { savedModel | candidates = List.filter (notNamed candidate.name) model.candidates }
+            in
+                update (Shuffled newModel.candidates) newModel
 
         Pressed position ->
             case model.state of
@@ -460,6 +498,13 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+        Undo ->
+            case model.previous of
+                PreviousModel Nothing ->
+                    ( model, Cmd.none )
+
+                PreviousModel (Just m) ->
+                    ( m, Cmd.none )
 
 
 shuffleCandidatesCommand : List Candidate -> Cmd Msg
@@ -474,19 +519,27 @@ shuffleCandidatesCommand candidates =
 view : Model -> Html Msg
 view model =
     div []
-        [ renderHeader
+        [ renderHeader model
         , renderMain model
 
-        --, debugRenderModel model
+        --, debugRenderModel model "Debug model"
         ]
 
 
-renderHeader : Html Msg
-renderHeader =
+renderHeader : Model -> Html Msg
+renderHeader model =
     div [ class "header" ]
         [ text "Boardgame Ranking Tool (aka BRT)"
-        , button [ onClick Restart, class "small inverse" ] [ text "Restart" ]
+        , div [ class "header-buttons" ]
+            [ case model.previous of
+                PreviousModel (Just _) ->
+                    button [ onClick Undo, class "small inverse" ] [ text "Undo" ] 
+                PreviousModel Nothing ->
+                    text ""
+            , button [ onClick Restart, class "small inverse" ] [ text "Restart" ]
+            ]
         ]
+        
 
 
 renderHeading : (List (Html.Attribute Msg) -> List (Html Msg) -> Html Msg) -> String -> Html Msg
@@ -499,10 +552,10 @@ renderStrong txt =
     strong [] [ text txt ]
 
 
-debugRenderModel : Model -> Html Msg
-debugRenderModel model =
+debugRenderModel : Model -> String -> Html Msg
+debugRenderModel model title =
     div []
-        [ renderHeading h2 "Debug data"
+        [ renderHeading h2 title
         , dl []
             [ dt [] [ renderStrong "state" ]
             , dd [] [ debugRenderState model.state ]
@@ -515,6 +568,12 @@ debugRenderModel model =
             , dt [] [ renderStrong "currentPosition" ]
             , dd [] [ text (String.fromInt model.currentPosition) ]
             ]
+        , case model.previous of
+            PreviousModel (Just pm) ->
+                debugRenderModel pm "Previous model"
+            PreviousModel Nothing ->
+                text "-- no previous model --"
+            
         ]
 
 
@@ -632,6 +691,9 @@ renderConfirm model =
 renderPairing : Model -> List (Html Msg)
 renderPairing model =
     [ renderHeading h2 ("Pairing nr. " ++ String.fromInt model.round)
+    , renderStrong ("Current ranking: " ++ String.fromInt model.currentPosition)
+    , br [] []
+    , renderStrong ("Remaining available candidates: " ++ String.fromInt (availableCandidates model.candidates |> List.length))
     , p [] [ text "From the candidates below choose the one which you like the best" ]
     , div [ class "picking" ]
         [ div [ class "choices" ] (renderPairingCandidates model.choices)
@@ -677,4 +739,11 @@ renderPairingCandidates candidates =
 
 renderPairingCandidate : Candidate -> Html Msg
 renderPairingCandidate candidate =
-    button [ onClick (Pick candidate), class "primary" ] [ text candidate.name ]
+    div [ class "candidate" ]
+        [ button [ onClick (Pick candidate), class "primary" ] [ text candidate.name ]
+        , if candidate.score == 1 then 
+            a [ onClick (Delete candidate), href ("#") ] [ text "Remove" ]
+          else
+            text ""
+        ]
+

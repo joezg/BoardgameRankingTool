@@ -5229,10 +5229,20 @@ var $elm$core$Task$perform = F2(
 var $elm$browser$Browser$element = _Browser_element;
 var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $author$project$Main$NoNames = {$: 'NoNames'};
-var $author$project$Main$initialModel = {candidates: _List_Nil, choices: _List_Nil, currentPosition: 0, round: 0, state: $author$project$Main$NoNames};
-var $author$project$Main$Model = F5(
-	function (state, candidates, round, choices, currentPosition) {
-		return {candidates: candidates, choices: choices, currentPosition: currentPosition, round: round, state: state};
+var $author$project$Main$PreviousModel = function (a) {
+	return {$: 'PreviousModel', a: a};
+};
+var $author$project$Main$initialModel = {
+	candidates: _List_Nil,
+	choices: _List_Nil,
+	currentPosition: 0,
+	previous: $author$project$Main$PreviousModel($elm$core$Maybe$Nothing),
+	round: 0,
+	state: $author$project$Main$NoNames
+};
+var $author$project$Main$Model = F6(
+	function (state, candidates, round, choices, currentPosition, previous) {
+		return {candidates: candidates, choices: choices, currentPosition: currentPosition, previous: previous, round: round, state: state};
 	});
 var $elm_community$json_extra$Json$Decode$Extra$andMap = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
 var $author$project$Main$Candidate = F4(
@@ -5333,28 +5343,57 @@ var $author$project$Main$stateDecoder = function () {
 	};
 	return A2($elm$json$Json$Decode$andThen, stringToState, $elm$json$Json$Decode$string);
 }();
-var $author$project$Main$modelDecoder = A2(
-	$elm_community$json_extra$Json$Decode$Extra$andMap,
-	A2($elm$json$Json$Decode$field, 'currentPosition', $elm$json$Json$Decode$int),
-	A2(
+function $author$project$Main$cyclic$modelDecoder() {
+	return A2(
 		$elm_community$json_extra$Json$Decode$Extra$andMap,
 		A2(
 			$elm$json$Json$Decode$field,
-			'choices',
-			$elm$json$Json$Decode$list($author$project$Main$candidateDecoder)),
+			'previous',
+			$author$project$Main$cyclic$previousDecoder()),
 		A2(
 			$elm_community$json_extra$Json$Decode$Extra$andMap,
-			A2($elm$json$Json$Decode$field, 'round', $elm$json$Json$Decode$int),
+			A2($elm$json$Json$Decode$field, 'currentPosition', $elm$json$Json$Decode$int),
 			A2(
 				$elm_community$json_extra$Json$Decode$Extra$andMap,
 				A2(
 					$elm$json$Json$Decode$field,
-					'candidates',
+					'choices',
 					$elm$json$Json$Decode$list($author$project$Main$candidateDecoder)),
 				A2(
 					$elm_community$json_extra$Json$Decode$Extra$andMap,
-					A2($elm$json$Json$Decode$field, 'state', $author$project$Main$stateDecoder),
-					$elm$json$Json$Decode$succeed($author$project$Main$Model))))));
+					A2($elm$json$Json$Decode$field, 'round', $elm$json$Json$Decode$int),
+					A2(
+						$elm_community$json_extra$Json$Decode$Extra$andMap,
+						A2(
+							$elm$json$Json$Decode$field,
+							'candidates',
+							$elm$json$Json$Decode$list($author$project$Main$candidateDecoder)),
+						A2(
+							$elm_community$json_extra$Json$Decode$Extra$andMap,
+							A2($elm$json$Json$Decode$field, 'state', $author$project$Main$stateDecoder),
+							$elm$json$Json$Decode$succeed($author$project$Main$Model)))))));
+}
+function $author$project$Main$cyclic$previousDecoder() {
+	return A2(
+		$elm$json$Json$Decode$map,
+		$author$project$Main$PreviousModel,
+		$elm$json$Json$Decode$nullable(
+			$elm$json$Json$Decode$lazy(
+				function (_v0) {
+					return $author$project$Main$cyclic$modelDecoder();
+				})));
+}
+try {
+	var $author$project$Main$modelDecoder = $author$project$Main$cyclic$modelDecoder();
+	$author$project$Main$cyclic$modelDecoder = function () {
+		return $author$project$Main$modelDecoder;
+	};
+	var $author$project$Main$previousDecoder = $author$project$Main$cyclic$previousDecoder();
+	$author$project$Main$cyclic$previousDecoder = function () {
+		return $author$project$Main$previousDecoder;
+	};
+} catch ($) {
+	throw 'Some top-level definitions from `Main` are causing infinite recursion:\n\n  ┌─────┐\n  │    modelDecoder\n  │     ↓\n  │    previousDecoder\n  └─────┘\n\nThese errors are very tricky, so read https://elm-lang.org/0.19.1/bad-recursion to learn how to fix it!';}
 var $author$project$Main$decodeModel = function (value) {
 	var decoded = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$modelDecoder, value);
 	if (decoded.$ === 'Ok') {
@@ -5800,6 +5839,20 @@ var $elm$browser$Browser$Events$onKeyDown = A2($elm$browser$Browser$Events$on, $
 var $author$project$Main$subscriptions = function (_v0) {
 	return $elm$browser$Browser$Events$onKeyDown($author$project$Main$keyDecoder);
 };
+var $author$project$Main$Shuffled = function (a) {
+	return {$: 'Shuffled', a: a};
+};
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
 var $elm$core$Array$fromListHelp = F3(
 	function (list, nodeList, nodeListSize) {
 		fromListHelp:
@@ -5887,17 +5940,6 @@ var $elm$core$Basics$composeR = F3(
 		return g(
 			f(x));
 	});
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
 var $author$project$Main$nameToCandidate = function (name) {
 	return {
 		eliminatedBy: $author$project$Main$PossibleCandidate($elm$core$Maybe$Nothing),
@@ -5919,12 +5961,24 @@ var $author$project$Main$namesToCandidates = function (names) {
 		trimmed);
 	return A2($elm$core$List$map, $author$project$Main$nameToCandidate, filtered);
 };
+var $elm$core$Basics$neq = _Utils_notEqual;
 var $author$project$Main$Impossible = {$: 'Impossible'};
 var $author$project$Main$JustOne = function (a) {
 	return {$: 'JustOne', a: a};
 };
 var $author$project$Main$Next = function (a) {
 	return {$: 'Next', a: a};
+};
+var $author$project$Main$availableCandidates = function (candidates) {
+	var isAvailable = function (candidate) {
+		var eliminatedBy = function () {
+			var _v0 = candidate.eliminatedBy;
+			var c = _v0.a;
+			return c;
+		}();
+		return _Utils_eq(candidate.ranking, $elm$core$Maybe$Nothing) && _Utils_eq(eliminatedBy, $elm$core$Maybe$Nothing);
+	};
+	return A2($elm$core$List$filter, isAvailable, candidates);
 };
 var $elm$core$List$sortBy = _List_sortBy;
 var $elm$core$List$takeReverse = F3(
@@ -6055,27 +6109,18 @@ var $elm$core$List$take = F2(
 	});
 var $author$project$Main$getPairing = F2(
 	function (number, candidates) {
-		var isAvailable = function (candidate) {
-			var eliminatedBy = function () {
-				var _v1 = candidate.eliminatedBy;
-				var c = _v1.a;
-				return c;
-			}();
-			return _Utils_eq(candidate.ranking, $elm$core$Maybe$Nothing) && _Utils_eq(eliminatedBy, $elm$core$Maybe$Nothing);
-		};
-		var available = A2($elm$core$List$filter, isAvailable, candidates);
 		var sorted = $elm$core$List$reverse(
 			A2(
 				$elm$core$List$sortBy,
 				function ($) {
 					return $.score;
 				},
-				available));
-		if (!available.b) {
+				$author$project$Main$availableCandidates(candidates)));
+		if (!sorted.b) {
 			return $author$project$Main$Impossible;
 		} else {
-			if (!available.b.b) {
-				var one = available.a;
+			if (!sorted.b.b) {
+				var one = sorted.a;
 				return $author$project$Main$JustOne(one);
 			} else {
 				return $author$project$Main$Next(
@@ -6083,9 +6128,6 @@ var $author$project$Main$getPairing = F2(
 			}
 		}
 	});
-var $author$project$Main$Shuffled = function (a) {
-	return {$: 'Shuffled', a: a};
-};
 var $elm$random$Random$Generate = function (a) {
 	return {$: 'Generate', a: a};
 };
@@ -6499,12 +6541,13 @@ var $elm$json$Json$Encode$list = F2(
 				_Json_emptyArray(_Utils_Tuple0),
 				entries));
 	});
-var $author$project$Main$encodeModel = function (_v0) {
-	var state = _v0.state;
-	var candidates = _v0.candidates;
-	var choices = _v0.choices;
-	var round = _v0.round;
-	var currentPosition = _v0.currentPosition;
+var $author$project$Main$encodeModel = function (_v2) {
+	var state = _v2.state;
+	var candidates = _v2.candidates;
+	var choices = _v2.choices;
+	var round = _v2.round;
+	var currentPosition = _v2.currentPosition;
+	var previous = _v2.previous;
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
 			[
@@ -6522,8 +6565,20 @@ var $author$project$Main$encodeModel = function (_v0) {
 				$elm$json$Json$Encode$int(round)),
 				_Utils_Tuple2(
 				'currentPosition',
-				$elm$json$Json$Encode$int(currentPosition))
+				$elm$json$Json$Encode$int(currentPosition)),
+				_Utils_Tuple2(
+				'previous',
+				$author$project$Main$encodePreviousModel(previous))
 			]));
+};
+var $author$project$Main$encodePreviousModel = function (_v0) {
+	var pm = _v0.a;
+	if (pm.$ === 'Nothing') {
+		return $elm$json$Json$Encode$null;
+	} else {
+		var model = pm.a;
+		return $author$project$Main$encodeModel(model);
+	}
 };
 var $author$project$Main$storage = _Platform_outgoingPort('storage', $elm$core$Basics$identity);
 var $author$project$Main$storeModel = function (model) {
@@ -6625,71 +6680,120 @@ var $author$project$Main$resolvePick = F2(
 				model,
 				{candidates: newCandidates}));
 	});
+var $author$project$Main$savePreviousModel = function (model) {
+	var previousModel = _Utils_update(
+		model,
+		{
+			previous: $author$project$Main$PreviousModel($elm$core$Maybe$Nothing)
+		});
+	return _Utils_update(
+		model,
+		{
+			previous: $author$project$Main$PreviousModel(
+				$elm$core$Maybe$Just(previousModel))
+		});
+};
 var $author$project$Main$update = F2(
 	function (msg, model) {
-		switch (msg.$) {
-			case 'None':
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-			case 'Restart':
-				return $author$project$Main$updateWithStore($author$project$Main$initialModel);
-			case 'Start':
-				return $author$project$Main$updateWithStore(
-					_Utils_update(
-						model,
-						{state: $author$project$Main$Preview}));
-			case 'RawCandidates':
-				var raw = msg.a;
-				var names = $elm$core$String$lines(raw);
-				return $author$project$Main$updateWithStore(
-					_Utils_update(
-						model,
+		update:
+		while (true) {
+			switch (msg.$) {
+				case 'None':
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				case 'Restart':
+					return $author$project$Main$updateWithStore($author$project$Main$initialModel);
+				case 'Start':
+					return $author$project$Main$updateWithStore(
+						_Utils_update(
+							model,
+							{state: $author$project$Main$Preview}));
+				case 'RawCandidates':
+					var raw = msg.a;
+					var names = $elm$core$String$lines(raw);
+					return $author$project$Main$updateWithStore(
+						_Utils_update(
+							model,
+							{
+								candidates: $author$project$Main$namesToCandidates(names)
+							}));
+				case 'Shuffled':
+					var candidates = msg.a;
+					return $author$project$Main$resolveNextPairing(
+						_Utils_update(
+							model,
+							{candidates: candidates}));
+				case 'PreviewConfirm':
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{currentPosition: 1}),
+						$author$project$Main$shuffleCandidatesCommand(model.candidates));
+				case 'Pick':
+					var candidate = msg.a;
+					return A2(
+						$author$project$Main$resolvePick,
+						$author$project$Main$savePreviousModel(model),
+						candidate);
+				case 'Delete':
+					var candidate = msg.a;
+					var savedModel = $author$project$Main$savePreviousModel(model);
+					var notNamed = F2(
+						function (name, c) {
+							return !_Utils_eq(c.name, name);
+						});
+					var newModel = _Utils_update(
+						savedModel,
 						{
-							candidates: $author$project$Main$namesToCandidates(names)
-						}));
-			case 'Shuffled':
-				var candidates = msg.a;
-				return $author$project$Main$resolveNextPairing(
-					_Utils_update(
-						model,
-						{candidates: candidates}));
-			case 'PreviewConfirm':
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{currentPosition: 1}),
-					$author$project$Main$shuffleCandidatesCommand(model.candidates));
-			case 'Pick':
-				var candidate = msg.a;
-				return A2($author$project$Main$resolvePick, model, candidate);
-			default:
-				var position = msg.a;
-				var _v1 = model.state;
-				if (_v1.$ === 'ShowPairing') {
-					var choiceArray = $elm$core$Array$fromList(model.choices);
-					var candidate = function () {
-						switch (position.$) {
-							case 'Left':
-								return A2($elm$core$Array$get, 0, choiceArray);
-							case 'Right':
-								return ($elm$core$Array$length(choiceArray) === 2) ? A2($elm$core$Array$get, 1, choiceArray) : A2($elm$core$Array$get, 2, choiceArray);
-							default:
-								return A2($elm$core$Array$get, 1, choiceArray);
+							candidates: A2(
+								$elm$core$List$filter,
+								notNamed(candidate.name),
+								model.candidates)
+						});
+					var $temp$msg = $author$project$Main$Shuffled(newModel.candidates),
+						$temp$model = newModel;
+					msg = $temp$msg;
+					model = $temp$model;
+					continue update;
+				case 'Pressed':
+					var position = msg.a;
+					var _v1 = model.state;
+					if (_v1.$ === 'ShowPairing') {
+						var choiceArray = $elm$core$Array$fromList(model.choices);
+						var candidate = function () {
+							switch (position.$) {
+								case 'Left':
+									return A2($elm$core$Array$get, 0, choiceArray);
+								case 'Right':
+									return ($elm$core$Array$length(choiceArray) === 2) ? A2($elm$core$Array$get, 1, choiceArray) : A2($elm$core$Array$get, 2, choiceArray);
+								default:
+									return A2($elm$core$Array$get, 1, choiceArray);
+							}
+						}();
+						if (candidate.$ === 'Just') {
+							var c = candidate.a;
+							return A2($author$project$Main$resolvePick, model, c);
+						} else {
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 						}
-					}();
-					if (candidate.$ === 'Just') {
-						var c = candidate.a;
-						return A2($author$project$Main$resolvePick, model, c);
 					} else {
 						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 					}
-				} else {
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-				}
+				default:
+					var _v4 = model.previous;
+					if (_v4.a.$ === 'Nothing') {
+						var _v5 = _v4.a;
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					} else {
+						var m = _v4.a.a;
+						return _Utils_Tuple2(m, $elm$core$Platform$Cmd$none);
+					}
+			}
 		}
 	});
 var $elm$json$Json$Decode$value = _Json_decodeValue;
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $author$project$Main$Restart = {$: 'Restart'};
+var $author$project$Main$Undo = {$: 'Undo'};
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
@@ -6718,27 +6822,57 @@ var $elm$html$Html$Events$onClick = function (msg) {
 };
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
-var $author$project$Main$renderHeader = A2(
-	$elm$html$Html$div,
-	_List_fromArray(
-		[
-			$elm$html$Html$Attributes$class('header')
-		]),
-	_List_fromArray(
-		[
-			$elm$html$Html$text('Boardgame Ranking Tool (aka BRT)'),
-			A2(
-			$elm$html$Html$button,
-			_List_fromArray(
-				[
-					$elm$html$Html$Events$onClick($author$project$Main$Restart),
-					$elm$html$Html$Attributes$class('small inverse')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('Restart')
-				]))
-		]));
+var $author$project$Main$renderHeader = function (model) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('header')
+			]),
+		_List_fromArray(
+			[
+				$elm$html$Html$text('Boardgame Ranking Tool (aka BRT)'),
+				A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('header-buttons')
+					]),
+				_List_fromArray(
+					[
+						function () {
+						var _v0 = model.previous;
+						if (_v0.a.$ === 'Just') {
+							return A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick($author$project$Main$Undo),
+										$elm$html$Html$Attributes$class('small inverse')
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Undo')
+									]));
+						} else {
+							var _v1 = _v0.a;
+							return $elm$html$Html$text('');
+						}
+					}(),
+						A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onClick($author$project$Main$Restart),
+								$elm$html$Html$Attributes$class('small inverse')
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Restart')
+							]))
+					]))
+			]));
+};
 var $author$project$Main$PreviewConfirm = {$: 'PreviewConfirm'};
 var $elm$html$Html$h2 = _VirtualDom_node('h2');
 var $elm$html$Html$li = _VirtualDom_node('li');
@@ -6840,26 +6974,68 @@ var $author$project$Main$renderDone = function (model) {
 			$author$project$Main$renderRankings(model.candidates)
 		]);
 };
+var $elm$html$Html$br = _VirtualDom_node('br');
 var $elm$html$Html$p = _VirtualDom_node('p');
+var $author$project$Main$Delete = function (a) {
+	return {$: 'Delete', a: a};
+};
 var $author$project$Main$Pick = function (a) {
 	return {$: 'Pick', a: a};
 };
+var $elm$html$Html$a = _VirtualDom_node('a');
+var $elm$html$Html$Attributes$href = function (url) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'href',
+		_VirtualDom_noJavaScriptUri(url));
+};
 var $author$project$Main$renderPairingCandidate = function (candidate) {
 	return A2(
-		$elm$html$Html$button,
+		$elm$html$Html$div,
 		_List_fromArray(
 			[
-				$elm$html$Html$Events$onClick(
-				$author$project$Main$Pick(candidate)),
-				$elm$html$Html$Attributes$class('primary')
+				$elm$html$Html$Attributes$class('candidate')
 			]),
 		_List_fromArray(
 			[
-				$elm$html$Html$text(candidate.name)
+				A2(
+				$elm$html$Html$button,
+				_List_fromArray(
+					[
+						$elm$html$Html$Events$onClick(
+						$author$project$Main$Pick(candidate)),
+						$elm$html$Html$Attributes$class('primary')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text(candidate.name)
+					])),
+				(candidate.score === 1) ? A2(
+				$elm$html$Html$a,
+				_List_fromArray(
+					[
+						$elm$html$Html$Events$onClick(
+						$author$project$Main$Delete(candidate)),
+						$elm$html$Html$Attributes$href('#')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Remove')
+					])) : $elm$html$Html$text('')
 			]));
 };
 var $author$project$Main$renderPairingCandidates = function (candidates) {
 	return A2($elm$core$List$map, $author$project$Main$renderPairingCandidate, candidates);
+};
+var $elm$html$Html$strong = _VirtualDom_node('strong');
+var $author$project$Main$renderStrong = function (txt) {
+	return A2(
+		$elm$html$Html$strong,
+		_List_Nil,
+		_List_fromArray(
+			[
+				$elm$html$Html$text(txt)
+			]));
 };
 var $author$project$Main$renderPairing = function (model) {
 	return _List_fromArray(
@@ -6868,6 +7044,13 @@ var $author$project$Main$renderPairing = function (model) {
 			$author$project$Main$renderHeading,
 			$elm$html$Html$h2,
 			'Pairing nr. ' + $elm$core$String$fromInt(model.round)),
+			$author$project$Main$renderStrong(
+			'Current ranking ' + $elm$core$String$fromInt(model.currentPosition)),
+			A2($elm$html$Html$br, _List_Nil, _List_Nil),
+			$author$project$Main$renderStrong(
+			'Remaining available candidates ' + $elm$core$String$fromInt(
+				$elm$core$List$length(
+					$author$project$Main$availableCandidates(model.candidates)))),
 			A2(
 			$elm$html$Html$p,
 			_List_Nil,
@@ -7036,7 +7219,7 @@ var $author$project$Main$view = function (model) {
 		_List_Nil,
 		_List_fromArray(
 			[
-				$author$project$Main$renderHeader,
+				$author$project$Main$renderHeader(model),
 				$author$project$Main$renderMain(model)
 			]));
 };

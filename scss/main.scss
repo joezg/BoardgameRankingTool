@@ -12,16 +12,26 @@ body {
         color: #5E5C6C;
         position: fixed;
         top: 0px;
-        height: 2rem;
         padding: 0.5rem 0.5rem 0.5rem 1.5rem;
         font-size: 1.5rem;
         width: 100vw;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        box-sizing: border-box;
 
-        button {
-            position: absolute;
-            right: 2.5rem;
-            top: 0.25rem;
+        .header-buttons {
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+
+            button {
+                height: 3rem;
+            }
         }
+
     }
 
     .main {
@@ -39,9 +49,18 @@ body {
             display: flex;
             flex-grow: 2;
             justify-content: space-evenly;
-            button {
-                margin-right: 0.2rem;
-                width: 15rem;
+
+            .candidate {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+
+                button {
+                    margin-right: 0.2rem;
+                    width: 15rem;
+                    height: 8rem;
+                }
             }
         }
 
